@@ -47,7 +47,7 @@ $ curl -s -m 8 -w "\nvote HTTP %{http_code}\n" -o /dev/null http://vote.swarm.lo
 vote HTTP 200
 
 $ curl -s -m 8 -w "\nHTTP %{http_code}\n" -X POST http://api.swarm.localhost/api/users -H "Content-Type: application/json" -d "{\"email\":\"pelavo@swarm.localhost\",\"password\":\"demo-password\"}"
-{"item":{"id":1,"email":"pelavo@swarm.localhost","hashedPassword":"$argon2id$v=19$m=65536,t=3,p=4$y/OvEoraT6nGVPBEe464zw$BBKnUux517HoRaLQ/xn9J6yE75BYDaNq2j833XWRDGY","createdAt":"2026-11-04T11:41:00.061Z"}}
+{"item":{"id":1,"email":"pelavo@swarm.localhost","hashedPassword":"<hash>","createdAt":"2026-11-04T11:41:00.061Z"}}
 HTTP 200
 
 $ curl -s -m 8 -o /dev/null -w "POST /api/users/tokens HTTP %{http_code}\n" -X POST http://api.swarm.localhost/api/users/tokens -H "Content-Type: application/json" -d "{\"email\":\"pelavo@swarm.localhost\",\"password\":\"demo-password\"}"

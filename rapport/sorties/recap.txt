@@ -1,0 +1,35 @@
+$ docker exec swarm-manager-1 docker stack ls
+NAME        SERVICES
+authelia    1
+dozzle      1
+mfp         3
+portainer   2
+traefik     2
+vote        5
+
+$ docker exec swarm-manager-1 docker service ls --format "table {{.Name}}\t{{.Mode}}\t{{.Replicas}}\t{{.Image}}"
+NAME                  MODE         REPLICAS   IMAGE
+authelia_authelia     replicated   1/1        authelia/authelia:4.39
+dozzle_dozzle         global       4/4        amir20/dozzle:v11.4.0
+mfp_client            replicated   2/2        plvo/mfp-client:1.0
+mfp_db                replicated   1/1        postgres:17
+mfp_server            replicated   2/2        plvo/mfp-server:1.0
+portainer_agent       global       4/4        portainer/agent:lts
+portainer_portainer   replicated   1/1        portainer/portainer-ce:lts
+traefik_traefik       replicated   1/1        traefik:v3.6
+traefik_whoami        replicated   1/1        traefik/whoami:latest
+vote_db               replicated   1/1        postgres:15-alpine
+vote_redis            replicated   1/1        redis:alpine
+vote_result           replicated   1/1        dockersamples/examplevotingapp_result:latest
+vote_vote             replicated   2/2        dockersamples/examplevotingapp_vote:latest
+vote_worker           replicated   2/2        dockersamples/examplevotingapp_worker:latest
+
+http://traefik.swarm.localhost/dashboard/        200
+http://whoami.swarm.localhost/                   200
+http://vote.swarm.localhost/                     200
+http://result.swarm.localhost/                   200
+http://portainer.swarm.localhost/                200
+http://mfp.swarm.localhost/                      200
+http://api.swarm.localhost/api/users/me          403
+https://dozzle.swarm.localhost/login             200
+https://authelia.swarm.localhost/                200
