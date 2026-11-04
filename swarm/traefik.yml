@@ -1,0 +1,63 @@
+services:
+  traefik:
+    image: traefik:v3.6
+    networks:
+      # Connect to the 'web' overlay network for inter-container communication across nodes
+      - web
+    ports:
+      - 80:80 # HTTP
+      # - 443:443   # HTTPS - Would work only on a server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Swarm API socket
+    command:
+      # HTTP EntryPoint
+      - "--entrypoints.web.address=:80"
+      # Enable the Docker Swarm provider (instead of Docker provider)
+      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+      # Watch for Swarm service changes (requires socket access)
+      - "--providers.swarm.watch=true"
+      # Recommended: Don't expose services by default; require explicit labels
+      - "--providers.swarm.exposedbydefault=false"
+      # Specify the default network for Traefik to connect to services
+      - "--providers.swarm.network=web"
+      # API & Dashboard
+      - "--api.dashboard=true" # Enable the dashboard
+      - "--api.insecure=true" # Explicitly disable insecure API mod
+      # Observability
+      - "--log.level=INFO" # Set the Log Level e.g INFO, DEBUG
+      - "--accesslog=true" # Enable Access Logs
+      # - "--metrics.prometheus=true" # Enable Prometheus
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        # Placement constraints restrict where Traefik tasks can run.
+        # Running on manager nodes is common for accessing the Swarm API via the socket.
+        constraints:
+          - node.role == manager
+      # Traefik Dynamic configuration via labels
+      # In Swarm, labels on the service definition configure Traefik routing for that service.
+      labels:
+        - "traefik.enable=true"
+        # Dashboard router
+        - "traefik.http.routers.dashboard.rule=Host(`traefik.swarm.localhost`)"
+        - "traefik.http.routers.dashboard.entrypoints=web"
+        - "traefik.http.routers.dashboard.service=api@internal"
+        - "traefik.http.services.dashboard.loadbalancer.server.port=8080"
+
+  # Deploy the Whoami application
+  whoami:
+    image: traefik/whoami
+    networks:
+      - web
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.whoami.rule=Host(`whoami.swarm.localhost`)"
+        - "traefik.http.routers.whoami.entrypoints=web"
+        - "traefik.http.services.whoami.loadbalancer.server.port=80"
+
+# Define the overlay network for Swarm
+networks:
+  web:
+    external: true

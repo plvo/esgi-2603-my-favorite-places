@@ -1,0 +1,37 @@
+$ docker exec swarm-manager-1 docker network create -d overlay --attachable web
+rcbhi6hxq55h5gksx6mdf2wo4
+
+$ docker cp traefik.yml swarm-manager-1:/home/manager/traefik.yml
+
+$ docker exec swarm-manager-1 docker stack deploy --detach=true -c /home/manager/traefik.yml traefik
+Creating service traefik_traefik
+Creating service traefik_whoami
+
+$ docker exec swarm-manager-1 docker stack services traefik
+ID             NAME              MODE         REPLICAS   IMAGE                   PORTS
+2h5tu673cef8   traefik_traefik   replicated   1/1        traefik:v3.6            *:80->80/tcp
+9ucy19b91y73   traefik_whoami    replicated   1/1        traefik/whoami:latest   
+
+$ curl -s -m 8 http://whoami.swarm.localhost/
+Hostname: de1834f82d3f
+IP: 127.0.0.1
+IP: ::1
+IP: 10.0.1.6
+IP: 172.18.0.3
+RemoteAddr: 10.0.1.3:58668
+GET / HTTP/1.1
+Host: whoami.swarm.localhost
+User-Agent: curl/8.5.0
+Accept: */*
+Accept-Encoding: gzip
+X-Forwarded-For: 10.0.0.2
+X-Forwarded-Host: whoami.swarm.localhost
+X-Forwarded-Port: 80
+X-Forwarded-Proto: http
+X-Forwarded-Server: d01e50063750
+X-Real-Ip: 10.0.0.2
+
+
+$ curl -s -m 8 -o /dev/null -w "dashboard HTTP %{http_code}\n" http://traefik.swarm.localhost/dashboard/
+dashboard HTTP 200
+

@@ -1,0 +1,59 @@
+$ docker compose up -d
+ Image docker:dind Pulled 
+ Image docker:dind Pulled 
+ Network swarm_default Creating 
+ Network swarm_default Creating 
+ Network swarm_default Created 
+ Network swarm_default Created 
+ Container swarm-node-3 Creating 
+ Container swarm-node-2 Creating 
+ Container swarm-node-1 Creating 
+ Container swarm-manager-1 Creating 
+ Container swarm-node-2 Created 
+ Container swarm-node-3 Created 
+ Container swarm-node-1 Created 
+ Container swarm-manager-1 Created 
+ Container swarm-manager-1 Starting 
+ Container swarm-node-1 Starting 
+ Container swarm-manager-1 Started 
+ Container swarm-node-1 Started 
+ Container swarm-node-3 Starting 
+ Container swarm-node-3 Started 
+ Container swarm-node-2 Starting 
+ Container swarm-node-2 Started 
+
+$ docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}" --filter name=swarm-
+NAMES             IMAGE         STATUS                  PORTS
+swarm-manager-1   docker:dind   Up Less than a second   0.0.0.0:80->80/tcp, [::]:80->80/tcp, 2375-2376/tcp
+swarm-node-1      docker:dind   Up Less than a second   2375-2376/tcp
+swarm-node-3      docker:dind   Up Less than a second   2375-2376/tcp
+swarm-node-2      docker:dind   Up Less than a second   2375-2376/tcp
+
+$ docker exec swarm-node-1 docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+
+$ docker exec swarm-manager-1 docker swarm init
+Swarm initialized: current node (rvkpoi5q67x28p1343k9mgi6s) is now a manager.
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token <TOKEN> 172.21.0.2:2377
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
+$ docker exec swarm-node-1 docker swarm join --token <TOKEN> manager:2377
+This node joined a swarm as a worker.
+
+$ docker exec swarm-node-2 docker swarm join --token <TOKEN> manager:2377
+This node joined a swarm as a worker.
+
+$ docker exec swarm-node-3 docker swarm join --token <TOKEN> manager:2377
+This node joined a swarm as a worker.
+
+$ docker exec swarm-manager-1 docker node ls
+ID                            HOSTNAME       STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+e28xwqci5wxflocjog7066yj9     d0ada8f4a045   Ready     Active                          29.9.3
+59n2ucz29gt124ptp8ojujrb6     ddc4456364e2   Ready     Active                          29.9.3
+omgnnm2hagod7rs8effm3ze9d     de69559d8a5a   Ready     Active                          29.9.3
+rvkpoi5q67x28p1343k9mgi6s *   manager        Ready     Active         Leader           29.9.3
+

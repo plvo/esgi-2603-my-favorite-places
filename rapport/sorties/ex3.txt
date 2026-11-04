@@ -1,0 +1,15 @@
+$ docker cp portainer.yml swarm-manager-1:/home/manager/portainer.yml
+
+$ docker exec swarm-manager-1 docker stack deploy --detach=true -c /home/manager/portainer.yml portainer
+Creating network portainer_agent_network
+Creating service portainer_agent
+Creating service portainer_portainer
+
+$ docker exec swarm-manager-1 docker stack services portainer
+ID             NAME                  MODE         REPLICAS   IMAGE                        PORTS
+v87x4dty41fm   portainer_agent       global       4/4        portainer/agent:lts          
+75tmetgus6zx   portainer_portainer   replicated   1/1        portainer/portainer-ce:lts   *:8000->8000/tcp, *:9000->9000/tcp, *:9443->9443/tcp
+
+$ curl -s -m 8 -o /dev/null -w "portainer HTTP %{http_code}\n" http://portainer.swarm.localhost/
+portainer HTTP 200
+

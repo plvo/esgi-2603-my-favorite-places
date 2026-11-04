@@ -1,0 +1,5 @@
+services:
+  hello:
+    image: nmatsui/hello-world-api
+    deploy:
+      replicas: 2

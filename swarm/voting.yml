@@ -1,0 +1,64 @@
+# this file is meant for Docker Swarm stacks only
+# trying it in compose will fail because of multiple replicas trying to bind to the same port
+# Swarm currently does not support Compose Spec, so we'll pin to the older version 3.9
+
+version: "3.9"
+
+services:
+
+  redis:
+    image: redis:alpine
+    networks:
+      - frontend
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  vote:
+    image: dockersamples/examplevotingapp_vote
+    networks:
+      - frontend
+      - web
+    deploy:
+      replicas: 2
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.vote.rule=Host(`vote.swarm.localhost`)"
+        - "traefik.http.routers.vote.entrypoints=web"
+        - "traefik.http.services.vote.loadbalancer.server.port=80"
+
+  result:
+    image: dockersamples/examplevotingapp_result
+    networks:
+      - backend
+      - web
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.result.rule=Host(`result.swarm.localhost`)"
+        - "traefik.http.routers.result.entrypoints=web"
+        - "traefik.http.services.result.loadbalancer.server.port=80"
+
+  worker:
+    image: dockersamples/examplevotingapp_worker
+    networks:
+      - frontend
+      - backend
+    deploy:
+      replicas: 2
+
+networks:
+  frontend:
+  backend:
+  web:
+    external: true
+
+volumes:
+  db-data:
