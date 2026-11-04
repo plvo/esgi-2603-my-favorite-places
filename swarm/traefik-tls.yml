@@ -1,0 +1,6 @@
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/swarm.crt
+        keyFile: /run/secrets/swarm_tls_key

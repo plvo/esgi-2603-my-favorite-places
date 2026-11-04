@@ -1,0 +1,43 @@
+server:
+  address: 'tcp://:9091'
+
+log:
+  level: 'info'
+
+authentication_backend:
+  password_reset:
+    disable: true
+  file:
+    path: '/run/secrets/authelia_users'
+
+access_control:
+  default_policy: 'one_factor'
+
+session:
+  cookies:
+    - domain: 'swarm.localhost'
+      authelia_url: 'https://authelia.swarm.localhost'
+
+storage:
+  local:
+    path: '/data/db.sqlite3'
+
+notifier:
+  filesystem:
+    filename: '/data/notification.txt'
+
+identity_providers:
+  oidc:
+    jwks:
+      - key: {{ secret "/run/secrets/authelia_oidc_jwk" | mindent 10 "|" | msquote }}
+    clients:
+      - client_id: 'dozzle'
+        client_name: 'Dozzle'
+        client_secret: '{{ secret "/run/secrets/dozzle_oidc_client_digest" }}'
+        authorization_policy: 'one_factor'
+        redirect_uris:
+          - 'https://dozzle.swarm.localhost/api/auth/callback'
+        scopes:
+          - 'openid'
+          - 'profile'
+          - 'email'

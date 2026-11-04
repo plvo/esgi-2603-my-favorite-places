@@ -1,0 +1,66 @@
+services:
+  authelia:
+    image: authelia/authelia:4.39
+    environment:
+      X_AUTHELIA_CONFIG: /etc/authelia/configuration.yml
+      X_AUTHELIA_CONFIG_FILTERS: template
+      AUTHELIA_SESSION_SECRET_FILE: /run/secrets/authelia_session_secret
+      AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE: /run/secrets/authelia_storage_key
+      AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE: /run/secrets/authelia_jwt_secret
+      AUTHELIA_IDENTITY_PROVIDERS_OIDC_HMAC_SECRET_FILE: /run/secrets/authelia_oidc_hmac
+    configs:
+      - source: authelia_config
+        target: /etc/authelia/configuration.yml
+    secrets:
+      - authelia_users
+      - authelia_session_secret
+      - authelia_storage_key
+      - authelia_jwt_secret
+      - authelia_oidc_hmac
+      - authelia_oidc_jwk
+      - dozzle_oidc_client_digest
+    volumes:
+      - authelia-data:/data
+    networks:
+      - web
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.authelia.rule=Host(`authelia.swarm.localhost`)"
+        - "traefik.http.routers.authelia.entrypoints=websecure"
+        - "traefik.http.routers.authelia.tls=true"
+        - "traefik.http.routers.authelia-http.rule=Host(`authelia.swarm.localhost`)"
+        - "traefik.http.routers.authelia-http.entrypoints=web"
+        - "traefik.http.routers.authelia-http.middlewares=authelia-to-https"
+        - "traefik.http.middlewares.authelia-to-https.redirectscheme.scheme=https"
+        - "traefik.http.services.authelia.loadbalancer.server.port=9091"
+
+networks:
+  web:
+    external: true
+
+volumes:
+  authelia-data:
+
+configs:
+  authelia_config:
+    external: true
+
+secrets:
+  authelia_users:
+    external: true
+  authelia_session_secret:
+    external: true
+  authelia_storage_key:
+    external: true
+  authelia_jwt_secret:
+    external: true
+  authelia_oidc_hmac:
+    external: true
+  authelia_oidc_jwk:
+    external: true
+  dozzle_oidc_client_digest:
+    external: true

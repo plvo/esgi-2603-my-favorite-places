@@ -3,15 +3,29 @@ services:
     image: traefik:v3.6
     networks:
       # Connect to the 'web' overlay network for inter-container communication across nodes
-      - web
+      web:
+        # Lets Dozzle reach the Authelia issuer URL from inside the cluster
+        aliases:
+          - authelia.swarm.localhost
     ports:
       - 80:80 # HTTP
-      # - 443:443   # HTTPS - Would work only on a server
+      - 443:443 # HTTPS
+    configs:
+      - source: swarm_tls_cert
+        target: /etc/traefik/swarm.crt
+      - source: traefik_tls
+        target: /etc/traefik/tls.yml
+    secrets:
+      - swarm_tls_key
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Swarm API socket
     command:
       # HTTP EntryPoint
       - "--entrypoints.web.address=:80"
+      # HTTPS EntryPoint, required by Authelia
+      - "--entrypoints.websecure.address=:443"
+      # Self-signed default certificate for *.swarm.localhost
+      - "--providers.file.filename=/etc/traefik/tls.yml"
       # Enable the Docker Swarm provider (instead of Docker provider)
       - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
       # Watch for Swarm service changes (requires socket access)
@@ -60,4 +74,14 @@ services:
 # Define the overlay network for Swarm
 networks:
   web:
+    external: true
+
+configs:
+  swarm_tls_cert:
+    external: true
+  traefik_tls:
+    external: true
+
+secrets:
+  swarm_tls_key:
     external: true
