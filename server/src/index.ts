@@ -21,6 +21,7 @@ async function startApp() {
     console.error(
       `🚨 unable to connect to db: ${err?.message || JSON.stringify(err)}`,
     );
+    process.exit(1);
   }
 }
 

@@ -66,8 +66,8 @@ server:
 ```
 
 `depends_on` seul n'attend que le démarrage du conteneur, pas que PostgreSQL accepte des connexions. Sans le
-healthcheck, `datasource.initialize()` échoue et le serveur ne démarre pas (le `catch` de `index.ts` logge
-l'erreur mais ne relance rien).
+healthcheck, `datasource.initialize()` échoue : le `catch` de `index.ts` logge l'erreur et arrête le processus avec
+le code 1, pour que la politique de redémarrage (Compose comme Swarm) relance le conteneur.
 
 ### 2. Redémarrage automatique
 
