@@ -2,7 +2,9 @@ FROM node:22-slim AS build
 WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
-COPY . .
+COPY index.html vite.config.ts tsconfig.json tsconfig.app.json tsconfig.node.json ./
+COPY public ./public
+COPY src ./src
 RUN yarn build
 
 FROM nginx:alpine
