@@ -1,0 +1,111 @@
+$ docker exec swarm-manager-1 mkdir -p /home/manager
+
+$ docker cp hello-world.compose.yml swarm-manager-1:/home/manager/hello-world.compose.yml
+
+$ docker exec swarm-manager-1 docker stack deploy --detach=true -c /home/manager/hello-world.compose.yml hello
+Creating network hello_default
+Creating service hello_hello-world
+
+$ docker exec swarm-manager-1 docker service ls
+ID             NAME                MODE         REPLICAS   IMAGE                PORTS
+4pv9hm20b6r6   hello_hello-world   replicated   0/2        hello-world:latest   
+
+$ docker exec swarm-manager-1 docker service ps hello_hello-world --format "table {{.Name}}\t{{.Node}}\t{{.DesiredState}}\t{{.CurrentState}}\t{{.Error}}" | head -12
+NAME                      NODE           DESIRED STATE   CURRENT STATE                      ERROR
+hello_hello-world.1       de69559d8a5a   Ready           Preparing less than a second ago   
+ \_ hello_hello-world.1   de69559d8a5a   Shutdown        Complete less than a second ago    
+ \_ hello_hello-world.1   de69559d8a5a   Shutdown        Complete 6 seconds ago             
+ \_ hello_hello-world.1   de69559d8a5a   Shutdown        Complete 11 seconds ago            
+ \_ hello_hello-world.1   manager        Shutdown        Complete 17 seconds ago            
+ \_ hello_hello-world.1   manager        Shutdown        Complete 22 seconds ago            
+hello_hello-world.2       manager        Ready           Preparing less than a second ago   
+ \_ hello_hello-world.2   manager        Shutdown        Complete less than a second ago    
+ \_ hello_hello-world.2   manager        Shutdown        Complete 6 seconds ago             
+ \_ hello_hello-world.2   d0ada8f4a045   Shutdown        Complete 11 seconds ago            
+ \_ hello_hello-world.2   de69559d8a5a   Shutdown        Complete 17 seconds ago            
+
+$ docker exec swarm-manager-1 docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+NAMES                                           IMAGE                STATUS
+hello_hello-world.2.zps6atg1odkzyh9tgnfd2i4ir   hello-world:latest   Exited (0) Less than a second ago
+hello_hello-world.2.ly3xfk669obe0qa5sd7o5yu6i   hello-world:latest   Exited (0) 6 seconds ago
+hello_hello-world.1.xsvfmesspbvmo75mh2w1o759i   hello-world:latest   Exited (0) 17 seconds ago
+hello_hello-world.1.9bja3gpzroyr53btwd4411sfe   hello-world:latest   Exited (0) 22 seconds ago
+
+$ docker exec swarm-node-1 docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+NAMES                                           IMAGE                STATUS
+hello_hello-world.1.tnb2j00r3btpapz69vesbuovc   hello-world:latest   Created
+hello_hello-world.1.87b9skeoc2zs71g4j9x7lyoc0   hello-world:latest   Exited (0) Less than a second ago
+hello_hello-world.1.pr3czdyq219h2bjuf2obwatp4   hello-world:latest   Exited (0) 6 seconds ago
+hello_hello-world.1.ng9str5x3451fh2qaj3gi30u3   hello-world:latest   Exited (0) 11 seconds ago
+hello_hello-world.2.nct0thcqlf6aw7whl17u96mwz   hello-world:latest   Exited (0) 17 seconds ago
+hello_hello-world.2.e03f8ka6e9zchv27i1ptet73j   hello-world:latest   Exited (0) 22 seconds ago
+
+$ docker exec swarm-node-2 docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+NAMES                                           IMAGE                STATUS
+hello_hello-world.2.at1ipuz3z1gdwrgkgzl355c8q   hello-world:latest   Exited (0) 11 seconds ago
+
+$ docker exec swarm-node-3 docker ps -a --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+NAMES     IMAGE     STATUS
+
+$ docker exec swarm-manager-1 docker stack rm hello
+Removing service hello_hello-world
+Removing network hello_default
+
+$ docker cp hello-replicas.compose.yml swarm-manager-1:/home/manager/hello-replicas.compose.yml
+
+$ docker exec swarm-manager-1 docker stack deploy --detach=true -c /home/manager/hello-replicas.compose.yml helloreplicas
+Creating network helloreplicas_default
+Creating service helloreplicas_hello
+
+$ docker exec swarm-manager-1 docker service ls
+ID             NAME                  MODE         REPLICAS   IMAGE                            PORTS
+xr43xmzrqd5r   helloreplicas_hello   replicated   2/2        nmatsui/hello-world-api:latest   
+
+$ docker exec swarm-manager-1 docker service ps helloreplicas_hello --filter desired-state=running --format 'table {{.Name}}\t{{.Node}}\t{{.CurrentState}}\t{{.Error}}'
+NAME                    NODE           CURRENT STATE            ERROR
+helloreplicas_hello.1   manager        Running 20 seconds ago   
+helloreplicas_hello.2   de69559d8a5a   Running 20 seconds ago   
+
+$ docker exec swarm-manager-1 docker stack rm helloreplicas
+Removing service helloreplicas_hello
+Removing network helloreplicas_default
+
+$ docker cp hello-manager.compose.yml swarm-manager-1:/home/manager/hello-manager.compose.yml
+
+$ docker exec swarm-manager-1 docker stack deploy --detach=true -c /home/manager/hello-manager.compose.yml hellomanager
+Creating network hellomanager_default
+Creating service hellomanager_hello
+
+$ docker exec swarm-manager-1 docker service ls
+ID             NAME                 MODE         REPLICAS   IMAGE                            PORTS
+11e55fdra2lk   hellomanager_hello   replicated   1/1        nmatsui/hello-world-api:latest   
+
+$ docker exec swarm-manager-1 docker service ps hellomanager_hello --filter desired-state=running --format 'table {{.Name}}\t{{.Node}}\t{{.CurrentState}}\t{{.Error}}'
+NAME                   NODE      CURRENT STATE            ERROR
+hellomanager_hello.1   manager   Running 24 seconds ago   
+
+$ docker exec swarm-manager-1 docker stack rm hellomanager
+Removing service hellomanager_hello
+Removing network hellomanager_default
+
+$ docker cp hello-global.compose.yml swarm-manager-1:/home/manager/hello-global.compose.yml
+
+$ docker exec swarm-manager-1 docker stack deploy --detach=true -c /home/manager/hello-global.compose.yml helloglobal
+Creating network helloglobal_default
+Creating service helloglobal_hello
+
+$ docker exec swarm-manager-1 docker service ls
+ID             NAME                MODE      REPLICAS   IMAGE                            PORTS
+ndli9jkptfxg   helloglobal_hello   global    4/4        nmatsui/hello-world-api:latest   
+
+$ docker exec swarm-manager-1 docker service ps helloglobal_hello --filter desired-state=running --format 'table {{.Name}}\t{{.Node}}\t{{.CurrentState}}\t{{.Error}}'
+NAME                                          NODE           CURRENT STATE            ERROR
+helloglobal_hello.59n2ucz29gt124ptp8ojujrb6   ddc4456364e2   Running 20 seconds ago   
+helloglobal_hello.e28xwqci5wxflocjog7066yj9   d0ada8f4a045   Running 20 seconds ago   
+helloglobal_hello.omgnnm2hagod7rs8effm3ze9d   de69559d8a5a   Running 24 seconds ago   
+helloglobal_hello.rvkpoi5q67x28p1343k9mgi6s   manager        Running 24 seconds ago   
+
+$ docker exec swarm-manager-1 docker stack rm helloglobal
+Removing service helloglobal_hello
+Removing network helloglobal_default
+

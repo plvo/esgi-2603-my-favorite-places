@@ -1,0 +1,15 @@
+services:
+  manager:
+    image: docker:dind
+    privileged: true
+    hostname: manager
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /home/manager
+
+  node:
+    image: docker:dind
+    privileged: true
+    scale: 3

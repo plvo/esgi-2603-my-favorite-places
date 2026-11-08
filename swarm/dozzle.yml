@@ -1,0 +1,56 @@
+services:
+  dozzle:
+    image: amir20/dozzle:v11.4.0
+    environment:
+      DOZZLE_MODE: swarm
+      DOZZLE_AUTH_PROVIDER: simple
+      DOZZLE_AUTH_OIDC_ISSUER: https://authelia.swarm.localhost
+      DOZZLE_AUTH_OIDC_CLIENT_ID: dozzle
+      DOZZLE_AUTH_OIDC_CLIENT_SECRET_FILE: /run/secrets/dozzle_oidc_client_secret
+      DOZZLE_AUTH_OIDC_NAME: Authelia
+      SSL_CERT_FILE: /etc/ssl/swarm.crt
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - dozzle-data:/data
+    configs:
+      - source: swarm_tls_cert
+        target: /etc/ssl/swarm.crt
+    secrets:
+      - source: dozzle_users
+        target: /data/users.yml
+      - dozzle_oidc_client_secret
+    networks:
+      - dozzle
+      - web
+    deploy:
+      mode: global
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.dozzle.rule=Host(`dozzle.swarm.localhost`)"
+        - "traefik.http.routers.dozzle.entrypoints=websecure"
+        - "traefik.http.routers.dozzle.tls=true"
+        - "traefik.http.routers.dozzle-http.rule=Host(`dozzle.swarm.localhost`)"
+        - "traefik.http.routers.dozzle-http.entrypoints=web"
+        - "traefik.http.routers.dozzle-http.middlewares=dozzle-to-https"
+        - "traefik.http.middlewares.dozzle-to-https.redirectscheme.scheme=https"
+        - "traefik.http.services.dozzle.loadbalancer.server.port=8080"
+        - "traefik.http.services.dozzle.loadbalancer.sticky.cookie=true"
+
+networks:
+  dozzle:
+    driver: overlay
+  web:
+    external: true
+
+volumes:
+  dozzle-data:
+
+configs:
+  swarm_tls_cert:
+    external: true
+
+secrets:
+  dozzle_users:
+    external: true
+  dozzle_oidc_client_secret:
+    external: true

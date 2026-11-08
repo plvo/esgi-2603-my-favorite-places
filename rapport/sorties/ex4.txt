@@ -1,0 +1,64 @@
+$ docker exec swarm-manager-1 docker stack ls
+NAME        SERVICES
+portainer   2
+traefik     2
+vote        5
+
+$ docker exec swarm-manager-1 docker stack rm vote
+Removing service vote_db
+Removing service vote_redis
+Removing service vote_result
+Removing service vote_vote
+Removing service vote_worker
+Removing network vote_frontend
+Removing network vote_backend
+
+$ docker exec swarm-manager-1 docker stack ls
+NAME        SERVICES
+portainer   2
+traefik     2
+
+$ docker exec swarm-manager-1 docker stack ls
+NAME        SERVICES
+mfp         3
+portainer   2
+traefik     2
+vote        5
+
+$ docker exec swarm-manager-1 docker stack services mfp
+ID             NAME         MODE         REPLICAS   IMAGE                 PORTS
+mntamx4y5fg1   mfp_client   replicated   2/2        plvo/mfp-client:1.0   
+rv4pi3ccjjj2   mfp_db       replicated   1/1        postgres:17           
+kj7yla1ps0mz   mfp_server   replicated   2/2        plvo/mfp-server:1.0   
+
+$ docker exec swarm-manager-1 docker stack ps mfp --format "table {{.Name}}\t{{.Node}}\t{{.DesiredState}}\t{{.CurrentState}}\t{{.Error}}"
+NAME               NODE           DESIRED STATE   CURRENT STATE            ERROR
+mfp_client.1       de69559d8a5a   Running         Running 34 seconds ago   
+ \_ mfp_client.1   de69559d8a5a   Shutdown        Failed 40 seconds ago    "task: non-zero exit (1)"
+mfp_client.2       d0ada8f4a045   Running         Running 39 seconds ago   
+mfp_db.1           manager        Running         Running 37 seconds ago   
+mfp_server.1       d0ada8f4a045   Running         Running 33 seconds ago   
+ \_ mfp_server.1   d0ada8f4a045   Shutdown        Failed 38 seconds ago    "task: non-zero exit (1)"
+mfp_server.2       ddc4456364e2   Running         Running 35 seconds ago   
+ \_ mfp_server.2   ddc4456364e2   Shutdown        Failed 40 seconds ago    "task: non-zero exit (1)"
+
+$ curl -s -m 8 -w "\nvote HTTP %{http_code}\n" -o /dev/null http://vote.swarm.localhost/
+
+vote HTTP 200
+
+$ curl -s -m 8 -w "\nHTTP %{http_code}\n" -X POST http://api.swarm.localhost/api/users -H "Content-Type: application/json" -d "{\"email\":\"pelavo@swarm.localhost\",\"password\":\"demo-password\"}"
+{"item":{"id":1,"email":"pelavo@swarm.localhost","hashedPassword":"<hash>","createdAt":"2026-11-04T11:41:00.061Z"}}
+HTTP 200
+
+$ curl -s -m 8 -o /dev/null -w "POST /api/users/tokens HTTP %{http_code}\n" -X POST http://api.swarm.localhost/api/users/tokens -H "Content-Type: application/json" -d "{\"email\":\"pelavo@swarm.localhost\",\"password\":\"demo-password\"}"
+POST /api/users/tokens HTTP 200
+
+$ curl -s -m 8 -o /dev/null -w "GET /api/users/me sans token HTTP %{http_code}\n" http://api.swarm.localhost/api/users/me
+GET /api/users/me sans token HTTP 403
+
+$ curl -s -m 8 -o /dev/null -w "client HTTP %{http_code}\n" http://mfp.swarm.localhost/
+client HTTP 200
+
+$ curl -s -m 8 -o /dev/null -w "client vers API via nginx HTTP %{http_code}\n" http://mfp.swarm.localhost/api/users/me
+client vers API via nginx HTTP 403
+

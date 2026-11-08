@@ -1,0 +1,153 @@
+$ docker compose up -d manager 2>&1 | tail -3
+ Container swarm-manager-1 Recreated 
+ Container swarm-manager-1 Starting 
+ Container swarm-manager-1 Started 
+
+$ docker exec swarm-manager-1 docker node ls
+ID                            HOSTNAME       STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+e28xwqci5wxflocjog7066yj9     d0ada8f4a045   Ready     Active                          29.9.3
+59n2ucz29gt124ptp8ojujrb6     ddc4456364e2   Ready     Active                          29.9.3
+omgnnm2hagod7rs8effm3ze9d     de69559d8a5a   Ready     Active                          29.9.3
+rvkpoi5q67x28p1343k9mgi6s *   manager        Ready     Active         Leader           29.9.3
+
+$ docker exec -i swarm-manager-1 docker secret create authelia_session_secret - < .local/authelia_session_secret
+lgtukr2lq2l2ygdoc89usl7b9
+
+$ docker exec -i swarm-manager-1 docker secret create authelia_storage_key - < .local/authelia_storage_key
+i33inqan7ezyg1wtsjzdm156l
+
+$ docker exec -i swarm-manager-1 docker secret create authelia_jwt_secret - < .local/authelia_jwt_secret
+wlsv7zggst8p8be8xv9nekt10
+
+$ docker exec -i swarm-manager-1 docker secret create authelia_oidc_hmac - < .local/authelia_oidc_hmac
+nxg1jr75ui3nf18l6qcw6ssqb
+
+$ docker exec -i swarm-manager-1 docker secret create dozzle_oidc_client_secret - < .local/dozzle_oidc_client_secret
+464sjt65dbdnmnob1gn0b89az
+
+$ docker exec -i swarm-manager-1 docker secret create dozzle_oidc_client_digest - < .local/dozzle_oidc_client_digest
+4amf02dp9200cbaa6p34qats8
+
+$ docker exec -i swarm-manager-1 docker secret create authelia_users - < .local/authelia_users.yml
+9ud79sxj76lr2e8zyocq1q9cf
+
+$ docker exec -i swarm-manager-1 docker secret create authelia_oidc_jwk - < .local/authelia_oidc_jwk.pem
+1ziebfnil6wtwtardmoy2rllg
+
+$ docker exec -i swarm-manager-1 docker secret create swarm_tls_key - < .local/tls.key
+sy8e8q64zpt2v6ddyw0f5n3h5
+
+$ docker exec -i swarm-manager-1 docker config create swarm_tls_cert - < .local/tls.crt
+x8rthjr0uv76y5zzabj9fikoc
+
+$ docker exec -i swarm-manager-1 docker config create traefik_tls - < traefik-tls.yml
+i2o9tdxtcfj6scaui2gfjahy5
+
+$ docker exec -i swarm-manager-1 docker config create authelia_config - < authelia-config.yml
+x9fjpit65ln41ci48e15afw85
+
+$ docker exec swarm-manager-1 docker secret ls --format "table {{.Name}}\t{{.CreatedAt}}"
+NAME                        CREATED
+authelia_jwt_secret         Less than a second ago
+authelia_oidc_hmac          Less than a second ago
+authelia_oidc_jwk           Less than a second ago
+authelia_session_secret     Less than a second ago
+authelia_storage_key        Less than a second ago
+authelia_users              Less than a second ago
+dozzle_oidc_client_digest   Less than a second ago
+dozzle_oidc_client_secret   Less than a second ago
+swarm_tls_key               Less than a second ago
+
+$ docker exec swarm-manager-1 docker secret inspect authelia_session_secret --format "{{json .Spec}}"
+{"Name":"authelia_session_secret","Labels":{}}
+
+$ docker exec swarm-manager-1 docker config inspect --pretty traefik_tls
+ID:			i2o9tdxtcfj6scaui2gfjahy5
+Name:			traefik_tls
+Created at:            	2026-11-04 11:44:07.61130305 +0000 utc
+Updated at:            	2026-11-04 11:44:07.61130305 +0000 utc
+Data:
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/swarm.crt
+        keyFile: /run/secrets/swarm_tls_key
+
+
+$ docker cp traefik.yml swarm-manager-1:/home/manager/traefik.yml
+
+$ docker exec swarm-manager-1 docker stack deploy --detach=true -c /home/manager/traefik.yml traefik
+Updating service traefik_whoami (id: 9ucy19b91y73cxyxe4mn3w0k7)
+Updating service traefik_traefik (id: 2h5tu673cef8kzne032w3vw4p)
+
+$ docker cp authelia.yml swarm-manager-1:/home/manager/authelia.yml
+
+$ docker exec swarm-manager-1 docker stack deploy --detach=true -c /home/manager/authelia.yml authelia
+Creating service authelia_authelia
+
+$ docker exec swarm-manager-1 docker stack services authelia
+ID             NAME                MODE         REPLICAS   IMAGE                    PORTS
+jznfzmuf95kf   authelia_authelia   replicated   0/1        authelia/authelia:4.39   
+
+$ curl -sk -m 8 -o /dev/null -w "authelia HTTPS %{http_code}\n" https://authelia.swarm.localhost/
+authelia HTTPS 404
+
+$ curl -s -m 8 -o /dev/null -w "authelia HTTP %{http_code} vers %{redirect_url}\n" http://authelia.swarm.localhost/
+authelia HTTP 404 vers 
+
+$ docker exec swarm-manager-1 docker stack rm authelia
+Removing service authelia_authelia
+
+$ docker exec swarm-manager-1 docker secret rm authelia_users
+authelia_users
+
+$ docker exec -i swarm-manager-1 docker secret create authelia_users - < .local/authelia_users.yml
+t9zcwpfhe8wuwa17vcrqyyulx
+
+$ docker cp authelia.yml swarm-manager-1:/home/manager/authelia.yml
+
+$ docker exec swarm-manager-1 docker stack deploy --detach=true -c /home/manager/authelia.yml authelia
+Creating service authelia_authelia
+
+$ docker exec swarm-manager-1 docker stack services authelia
+ID             NAME                MODE         REPLICAS   IMAGE                    PORTS
+tmq729n4qn6j   authelia_authelia   replicated   1/1        authelia/authelia:4.39   
+
+$ curl -sk -m 8 -o /dev/null -w "authelia HTTPS %{http_code}\n" https://authelia.swarm.localhost/
+authelia HTTPS 200
+
+$ curl -s -m 8 -o /dev/null -w "authelia HTTP %{http_code} vers %{redirect_url}\n" http://authelia.swarm.localhost/
+authelia HTTP 302 vers https://authelia.swarm.localhost/
+
+$ docker exec swarm-manager-1 docker secret ls --filter name=dozzle_users --format "table {{.Name}}\t{{.CreatedAt}}"
+NAME           CREATED
+dozzle_users   3 seconds ago
+
+$ docker cp dozzle.yml swarm-manager-1:/home/manager/dozzle.yml
+
+$ docker exec swarm-manager-1 docker stack deploy --detach=true -c /home/manager/dozzle.yml dozzle
+Creating network dozzle_dozzle
+Creating service dozzle_dozzle
+
+$ docker exec swarm-manager-1 docker stack services dozzle
+ID             NAME            MODE      REPLICAS   IMAGE                   PORTS
+hjl4q32x85oa   dozzle_dozzle   global    4/4        amir20/dozzle:v11.4.0   
+
+$ docker exec swarm-manager-1 docker service ps dozzle_dozzle --filter desired-state=running --format "table {{.Node}}\t{{.CurrentState}}\t{{.Error}}"
+NODE           CURRENT STATE            ERROR
+ddc4456364e2   Running 22 seconds ago   
+d0ada8f4a045   Running 22 seconds ago   
+de69559d8a5a   Running 22 seconds ago   
+manager        Running 22 seconds ago   
+
+$ docker exec swarm-manager-1 docker service logs --raw dozzle_dozzle | grep "\"provider\":\"oidc\""
+{"level":"info","version":"v11.4.0","user":"pelavo","provider":"oidc","time":"2026-11-04T11:49:16Z","message":"Token created"}
+
+$ curl -sk -m 8 https://authelia.swarm.localhost/.well-known/openid-configuration | jq "{issuer, authorization_endpoint, token_endpoint}"
+{
+  "issuer": "https://authelia.swarm.localhost",
+  "authorization_endpoint": "https://authelia.swarm.localhost/api/oidc/authorization",
+  "token_endpoint": "https://authelia.swarm.localhost/api/oidc/token"
+}
+

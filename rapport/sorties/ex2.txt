@@ -1,0 +1,48 @@
+$ git clone https://github.com/dockersamples/example-voting-app && cd example-voting-app
+$ docker compose up -d --build
+$ docker compose ps
+SERVICE   STATUS                    PORTS
+db        Up 45 seconds (healthy)   5432/tcp
+redis     Up 44 seconds (healthy)   6379/tcp
+result    Up 39 seconds             127.0.0.1:9229->9229/tcp, 0.0.0.0:8081->80/tcp, [::]:8081->80/tcp
+vote      Up 39 seconds (healthy)   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp
+worker    Up 39 seconds             
+
+$ docker cp voting.yml swarm-manager-1:/home/manager/voting.yml
+
+$ docker exec swarm-manager-1 docker stack deploy --detach=true -c /home/manager/voting.yml vote
+Creating network vote_backend
+Creating network vote_frontend
+Creating service vote_result
+Creating service vote_worker
+Creating service vote_redis
+Creating service vote_db
+Creating service vote_vote
+
+$ docker exec swarm-manager-1 docker stack services vote
+ID             NAME          MODE         REPLICAS   IMAGE                                          PORTS
+r9dfu4j2guwk   vote_db       replicated   1/1        postgres:15-alpine                             
+z56ei7i5ou6j   vote_redis    replicated   1/1        redis:alpine                                   
+u64aldpylmgh   vote_result   replicated   1/1        dockersamples/examplevotingapp_result:latest   
+gnmuv0bp03ku   vote_vote     replicated   2/2        dockersamples/examplevotingapp_vote:latest     
+pngoi8kcb3xu   vote_worker   replicated   2/2        dockersamples/examplevotingapp_worker:latest   
+
+$ docker exec swarm-manager-1 docker stack ps vote --filter desired-state=running --format "table {{.Name}}\t{{.Node}}\t{{.CurrentState}}\t{{.Error}}"
+NAME            NODE           CURRENT STATE            ERROR
+vote_db.1       de69559d8a5a   Running 40 seconds ago   
+vote_redis.1    ddc4456364e2   Running 43 seconds ago   
+vote_result.1   d0ada8f4a045   Running 45 seconds ago   
+vote_vote.1     manager        Running 39 seconds ago   
+vote_vote.2     ddc4456364e2   Running 40 seconds ago   
+vote_worker.1   d0ada8f4a045   Running 43 seconds ago   
+vote_worker.2   ddc4456364e2   Running 43 seconds ago   
+
+$ curl -s -m 8 -o /dev/null -w "vote HTTP %{http_code}\n" http://vote.swarm.localhost/
+vote HTTP 200
+
+$ curl -s -m 8 -o /dev/null -w "POST vote HTTP %{http_code}\n" -X POST -d vote=a http://vote.swarm.localhost/
+POST vote HTTP 200
+
+$ curl -s -m 8 -o /dev/null -w "result HTTP %{http_code}\n" http://result.swarm.localhost/
+result HTTP 200
+

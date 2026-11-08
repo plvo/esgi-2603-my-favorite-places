@@ -1,0 +1,27 @@
+$ docker compose up -d --build
+ Container esgi-2603-my-favorite-places-db-1 Started 
+ Container esgi-2603-my-favorite-places-db-1 Healthy 
+ Container esgi-2603-my-favorite-places-server-1 Started 
+ Container esgi-2603-my-favorite-places-client-1 Started 
+
+$ docker compose ps --format 'table {{.Service}}\t{{.Status}}\t{{.Ports}}'
+SERVICE   STATUS                   PORTS
+client    Up 6 seconds             0.0.0.0:8080->80/tcp, [::]:8080->80/tcp
+db        Up 8 seconds (healthy)   5432/tcp
+server    Up 6 seconds             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+
+$ docker inspect <conteneur> --format '{{.HostConfig.RestartPolicy.Name}}'
+db unless-stopped
+server unless-stopped
+client unless-stopped
+
+$ docker images --format 'table {{.Repository}}\t{{.Tag}}\t{{.Size}}'
+REPOSITORY                            TAG         SIZE
+plvo/mfp-client                       1.0         94.1MB
+esgi-2603-my-favorite-places-client   latest      94.1MB
+plvo/mfp-server                       1.0         334MB
+esgi-2603-my-favorite-places-server   latest      334MB
+
+$ curl -X POST http://localhost:8080/api/users -H 'Content-Type: application/json' -d '{"email":"demo@local.test","password":"demo-password"}'
+{"item":{"id":1,"email":"demo@local.test","hashedPassword":"<hash>","createdAt":"2026-11-04T11:50:40.933Z"}}
+HTTP 200

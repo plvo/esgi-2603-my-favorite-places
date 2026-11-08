@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: supersecret
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - mfp
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  server:
+    image: plvo/mfp-server:1.0
+    environment:
+      DB_HOST: db
+      DB_PASSWORD: supersecret
+    networks:
+      - mfp
+      - web
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.mfp-api.rule=Host(`api.swarm.localhost`)"
+        - "traefik.http.routers.mfp-api.entrypoints=web"
+        - "traefik.http.services.mfp-api.loadbalancer.server.port=3000"
+
+  client:
+    image: plvo/mfp-client:1.0
+    networks:
+      - mfp
+      - web
+    deploy:
+      replicas: 2
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.mfp-client.rule=Host(`mfp.swarm.localhost`)"
+        - "traefik.http.routers.mfp-client.entrypoints=web"
+        - "traefik.http.services.mfp-client.loadbalancer.server.port=80"
+
+networks:
+  mfp:
+  web:
+    external: true
+
+volumes:
+  db-data:
